@@ -7,6 +7,14 @@ resource "aws_s3_bucket" "s3_source_bucket" {
     }
 }
 
+resource "aws_s3_bucket" "s3_dest_bucket" {
+    bucket = "aws-devops-project02-dest-bucket"
+    force_destroy = true
+    tags = {
+      Environment = "dev"
+    }
+}
+
 resource "aws_lambda_permission" "allow_bucket" {
   statement_id  = "AllowExecutionFromS3Bucket"
   action        = "lambda:InvokeFunction"
