@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Sam app for s3 upload object trigger.
+
+
+Globals:
+  Function:
+    Timeout: 60
+    Runtime: python3.9
+
+Resources:
+  DynamodbS3Table:
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      TableName: "s3objects"
+      AttributeDefinitions:
+        - AttributeName: "file_name"
+          AttributeType: "S"
+        - AttributeName: "curr_dt"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "file_name"
+          KeyType: "HASH"
+        - AttributeName: "curr_dt"
+          KeyType: "RANGE"
+      BillingMode: "PAY_PER_REQUEST"
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaBasicExecution
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+        - PolicyName: LambdaDynamodbPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:DeleteItem
+                Resource: arn:aws:dynamodb:*:*:table/s3objects
+        - PolicyName: LambdaSNSPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource: "*"
+        - PolicyName: LambdaS3AccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: "arn:aws:s3:::*/*"
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: MySNSTopic
+
+  SNSTopicSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: email
+      Endpoint: jay416505@gmail.com
+      TopicArn: !Ref SNSTopic
+
+  S3UploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./s3_upload_lambda
+      Handler: app.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          SNS_APP_ID: !Ref SNSTopic
+
+Outputs:
+  S3UploadFunction:
+    Value: !GetAtt S3UploadFunction.Arn
+  SNSAppId:
+    Value: !Ref SNSTopic
