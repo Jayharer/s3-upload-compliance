@@ -5,8 +5,10 @@ from PIL import Image
 from io import BytesIO
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
+import os
 
 s3 = boto3.client('s3')
+sns_client = boto3.client('sns', region_name='us-east-1') 
 dynamo_db = boto3.resource('dynamodb')
 table = dynamo_db.Table('s3objects')
 
@@ -63,14 +65,24 @@ def lambda_handler(event, context):
                 'file_size':  Decimal(file_size).quantize(Decimal("0.01"),rounding=ROUND_HALF_UP),
                 'curr_dt': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             })
-        # craete thumbnai
-        create_thumbnail(
-            bucket_name=bucket,
-            object_key=key.replace(" ","_"),
-            thumbnail_bucket="aws-devops-project02-dest-bucket",
-            thumbnail_key=key,
-            size=(128, 128)
-        )
+        
+        if file_type.lower() in ["image/jpg","image/png","image/jpeg"]:
+            # craete thumbnai
+            create_thumbnail(
+                bucket_name=bucket,
+                object_key=key,
+                thumbnail_bucket="aws-devops-project02-dest-bucket",
+                thumbnail_key=key.replace(" ","-"),
+                size=(1024, 1024)
+            )
+            # send sns notification when object size > 250Mb
+            if file_size > 250:
+                topic_arn = os.getenv('SNS_APP_ID')
+                sns_client.publish(
+                    TopicArn=topic_arn,
+                    Message=f"S3 object s3://{bucket}/{key} and size is {file_size}Mb",
+                    Subject="S3 object exceed size limit."
+                )
         return key
     except Exception as e:
         print(e)

@@ -72,6 +72,10 @@ Resources:
                   - s3:GetObject
                   - s3:PutObject 
                 Resource: "arn:aws:s3:::*/*"
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: "arn:aws:s3:::*"
   SNSTopic:
     Type: AWS::SNS::Topic
     Properties:
