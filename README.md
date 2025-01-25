@@ -6,11 +6,16 @@
    e.g (file type, file size, file name, datetime).
 2. When s3 object size greater than 250Mb -> trigger SNS notification to account user.
 3. When s3 object type is jpg/png/jpeg create a thumbnail in another bucket.
-4. Implement lifecycle policies on bucket object.
+4. Implement lifecycle policies on bucket object. Move source bucket obejct
+   afetr 30days and 60 days to IA and Deep archive, delete after 90 days.
 ---
 
 ## Design
-
+- Create two s3 bucket source and dest bucket.
+- Create lambada function using sam and deploy to aws.
+- Cloudformation template in sam app that create dynamodb, 
+  lambda execution role and sns topic and subscription.
+- Configure s3 object create trigger action in terraform.
 ---
 
 ## Tools
@@ -27,11 +32,12 @@
 2. Lambda Functions
 3. SNS
 4. Dynamodb
-5. CloudFormation
+5. IAM
+6. CloudFormation
 ---
 
 ### Architecture
-![alt text](img/IAMAccessAndKeyRotation.drawio.png)
+![alt text](img/S3-Upload-Compliance.png)
 
 ---
 
@@ -39,7 +45,7 @@
 
 ### 1. Clone repo
 ```bash
-git clone https://github.com/Jayharer/Access-and-key-rotation-for-IAM-users.git
+git clone https://github.com/Jayharer/s3-upload-compliance.git
 ```
 
 ### 2. Install aws cli & configure default profile
@@ -48,9 +54,7 @@ git clone https://github.com/Jayharer/Access-and-key-rotation-for-IAM-users.git
 
 ### 4. Create s3 bucket in aws
 ```bash 
-cd aws 
-sam build -t s3-bucket.yml
-sam deploy --stack-name s3-bucket-stack
+aws s3 md s3://your-s3-bucket-name
 ```
 
 Update **src/samconfig.toml** with
@@ -82,8 +86,7 @@ terraform apply
 ## Clean up
 Delete all resources from AWS cloud
 ```bash
-aws cloudformation delete-stack --stack-name sam-app
-aws cloudformation delete-stack --stack-name s3-bucket-stack
+aws cloudformation delete-stack --stack-name sam-app-s3-upload
 cd iac 
 terraform destroy
 ```
